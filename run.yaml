@@ -1,0 +1,35 @@
+fingerprint:
+  methods:
+    - ecfp4
+    - mh6432
+  bitsize: 2048
+
+datasets:
+  nof_query_molecules: 5  # only 5, 10 , 20 allowed
+
+scoring:
+  similarity_measure: Tanimoto
+
+training:
+  # see the sklearn reference for explanations!
+  logistic_regression:
+    penalty: l2
+    dual: False
+    C: 1.0
+    fit_intercept: True
+    intercept_scaling: 1.0
+#    class_weight: None
+    tol: 0.0001
+    solver: lbfgs
+  random_forest:
+    criterion: gini
+    max_features: auto
+    n_jobs: 1
+    max_depth: 10
+    min_samples_split: 2
+    min_samples_leaf: 1
+    num_estimators: 100
+
+
+
+

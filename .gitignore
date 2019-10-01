@@ -1,0 +1,7 @@
+__pycache__/
+.python-version
+.ipy*
+.idea
+.DS_Store
+*.egg-info/
+*.swp
