@@ -35,10 +35,11 @@
 #
 
 # hardcoded global variables
+# TODO should they be hardcoded??
 list_num_query_mols = [5, 10, 20]
-num_reps = 50 # number of repetitions
-percent_dcy = 0.2 # percentage of decoys used for training
-p_value = 0.05 # confidence level for statistical analysis
+num_reps = 50  # number of repetitions
+percent_dcy = 0.2  # percentage of decoys used for training
+p_value = 0.05  # confidence level for statistical analysis
 
 # collection of data sets
 muv_ids = [466, 548, 600, 644, 652, 689, 692, 712, 713, 733, 737, 810, 832, 846, 852, 858, 859]
