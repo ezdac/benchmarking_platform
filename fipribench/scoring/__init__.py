@@ -53,114 +53,88 @@
 #
 
 # TODO refactor global configuration
-import fipribench.configuration_file_I as conf
+
 from fipribench.datasets import DataSet
-from fipribench.scoring.utils import fp_vector_to_nparray
+from fipribench.utils import fp_vector_to_nparray
 from fipribench.fingerprint import CalculateFP
-import pickle
-import gzip
-from collections import defaultdict
+import pandas as pd
+import numpy as np
+import enlighten
+
 import logging
 
-log = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
-def calculate_scored_lists(num_query_mols, fingerprint_method, outpath, simil_metric, scoring_model, append,
-                           filesystem, datasets: DataSet):
+def calculate_scored_lists(num_query_mols, fingerprint_method, outpath, simil_metric, scoring_model,
+                           target_name, dataset_name, datasets: DataSet, number_of_repetitions):
 
-    # TODO this check should be conducted by comparing global config and run_config
-    assert num_query_mols in (5, 10, 20)
+            # TODO use the get_dataframe instead of all this np stuff in this function !!!
+            LOGGER.info(f"Start scoring for: target={target_name}, dataset={dataset_name}, similarity_metric={simil_metric},"
+                     f" fingerprint={fingerprint_method.name}")
+            data = datasets.get_dataframe(dataset_name, target_name, num_query_mols)
 
-    # loop over data-set sources
-    # TODO refactor the datasetloop outside of function
-    for dataset_name in conf.set_data.keys():
-        log.info(dataset_name)
-        # loop over targets
-        firstchembl = True
-        # TODO refactor the target loop outside of function??
-        for target_name in conf.set_data[dataset_name]['ids']:
-            log.info(target_name)
+            # the last to columns' values are not shown in the debug output
+            LOGGER.debug(data[:5])
 
-            # read in actives and calculate fps
-            actives_ids = []
-            np_fps_act = []
-            for mol_data in datasets.get_actives(dataset_name, target_name):
-                    fp_vector = CalculateFP(fingerprint_method, mol_data.smiles)
-                    actives_ids.append(mol_data.internal_id)
-                    np_fps_act.append(fp_vector_to_nparray(fp_vector))
-            num_actives = len(actives_ids)
-            num_test_actives = num_actives - num_query_mols
+            # train the fingerprint method with all molecules marked for fingerprint training
+            fp_training_data = data[data['is_training'] == True]
+            LOGGER.info(f"Start training phase with {fp_training_data.shape[1] / data.shape[1] * 100:.2f}% of scoring samples")
+            fingerprint_method.train(fp_training_data['smiles'], fp_training_data['is_active'].astype(int))
+            # TODO print info on training phasse, #cluster blabla
+            LOGGER.info(f"Finished training phase.")
 
-            # read in decoys and calculate fps
-            decoys_ids = []
-            np_fps_dcy = []
-            if not (firstchembl is False and dataset_name == "ChEMBL"):
-                for mol_data in datasets.get_decoys(dataset_name, target_name):
-                    fp_vector = CalculateFP(fingerprint_method, mol_data.smiles)
-                    decoys_ids.append(mol_data.internal_id)
-                    np_fps_dcy.append(fp_vector_to_nparray(fp_vector))
-                if dataset_name == 'ChEMBL':
-                    firstchembl = False
+            # now calculate all fingerprints
+            data['fingerprint'] = data['smiles'].apply(fingerprint_method.calculate_fingerprint)
+            LOGGER.info("Calculated all fingerprints.")
 
-            num_decoys = len(decoys_ids)
-            log.info("Molecules read in and fingerprints calculated")
+            test_data = data[data['is_training'] == False]
+            training_data = data[data['is_training'] == False]
 
-            # open training lists
-            # this is a list of some IDs, they seem to be "randomly" appended to the list
-            training_list = datasets.get_training_list(dataset_name, target_name, num_query_mols)
             # to store the scored lists
-            scores = defaultdict(list)
+            # FIXME check correct shape
+            scores = np.empty((data.shape[0], 1))
 
             # loop over repetitions
-            for q in range(conf.num_reps):
-                log.info(q)
-
-                # this exludes some IDs, which are present in the training list, those will be used later in the
-                # train_fps to train the models
-                test_list = [i for i in range(num_actives) if i not in training_list[:num_query_mols]]
-                test_list += [i for i in range(num_decoys) if i not in training_list[num_query_mols:]]
-
-                # list with active/inactive info
-                # XXX they construct a list [1, 1, 1,..., 0,0,...] (class membership active/inactive)
-                ys_fit = [1]*num_query_mols + [0]*(len(training_list)-num_query_mols)
-
-                # training fps
-                # XXX they construct a list [active_fp, active_fp, active_fp, ..., inactive_fp, inactive_fp,...]
-                train_fps = [np_fps_act[i] for i in training_list[:num_query_mols]]
-                train_fps += [np_fps_dcy[i] for i in training_list[num_query_mols:]]
-
+            progress_bar_manager = enlighten.get_manager()
+            scoring_progress_bar = progress_bar_manager.counter(
+                total=number_of_repetitions,
+                desc='Scoring iterations',
+                unit='iterations',
+                leave=False
+            )
+            scoring_progress_bar.refresh()
+            for q in range(number_of_repetitions):
+                LOGGER.info(f"Training scoring model {scoring_model.name}, iteration={q + 1}")
                 # XXX now they use the training set and the ys_fit to train a model of some kind
                 # fit logistic regression
-                scoring_model.train(train_fps, ys_fit)
+                fingerprints = training_data['fingerprint'].to_numpy()
+                LOGGER.debug(fingerprints)
+                scoring_model.train(training_data['fingerprint'].values, training_data['is_active'].values)
 
-                # test fps and molecule info
-                test_fps = [np_fps_act[i] for i in test_list[:num_test_actives]]
-                test_fps += [np_fps_dcy[i] for i in test_list[num_test_actives:]]
-
-                test_mols = [[actives_ids[i], 1] for i in test_list[:num_test_actives]]
-                test_mols += [[decoys_ids[i], 0] for i in test_list[num_test_actives:]]
-
-                # rank based on probability
-                predicted_scores = scoring_model.predict(test_fps)
+                # rank test molecules based on probability
+                LOGGER.info(f"Predicting scores for test data, iteration={q + 1}")
+                predicted_scores = scoring_model.predict(test_data['fingerprint'])
                 # returns: array - like, shape = [n_samples, n_classes]
 
                 # store: [probability, internal ID, active/inactive]
-                # TODO check if the probablity is stored in single_score
-                single_score = [[s[1], m[0], m[1]] for s, m in zip(predicted_scores, test_mols)]
-                single_score.sort(reverse=True)
-                scores['lr_'+fingerprint_method].append(single_score)
+                # single_score = [[s[1], m[0], m[1]] for s, m in zip(predicted_scores, test_mols)]
+                scores = np.concatenate((predicted_scores[:, 1], scores), axis=1)
+                scoring_progress_bar.update()
 
-            # write scores to file
-            if append is True:
-                # binary format
-                outfile = gzip.open(outpath.joinpath(f'list_{dataset_name}_{str(target_name)}.pkl.gz'), 'ab+')
-            else:
-                # binary format
-                outfile = gzip.open(outpath.joinpath(f'list_{dataset_name}_{str(target_name)}.pkl.gz'), 'wb+')
-            #     FIXME this iterates over one element?
-            for fp in ['lr_'+fingerprint_method]:
-                pickle.dump([fp, scores[fp]], outfile, 2)
-                # TODO log filename etc
-                log.info("Written file")
-            outfile.close()
-            log.info("Scoring done and scored lists written")
+            scoring_progress_bar.close()
+            # FIXME does this do "hstacking" on the dataframe?
+            LOGGER.info(f"Finish scoring for: target={target_name}, dataset={dataset_name}, similarity_metric={simil_metric},"
+                     f"fingerprint={fingerprint_method.name}")
+            data['scores'] = scores
+
+
+            # FIXME they sort one single score per run
+            # we can't do that if we append scores to our df, because we have to associate the scores to the testmols.
+            # FIXME is this equivalent to: single_score.sort(reverse=True)
+            # active_proba = np.flip(np.sort(predicted_scores[:, 1]))
+            # I think we should sort outside, when we actually need this!
+
+            return scores
+
+

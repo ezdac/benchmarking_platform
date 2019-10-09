@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import numpy
 from rdkit.ML.Data import DataUtils
@@ -11,7 +11,12 @@ class ScoringModel(ABC):
     """
     Abstract class that defines the interface for different scoring methods
     """
+    @property
+    @abstractmethod
+    def name(self):
+        pass
 
+    @abstractmethod
     def train(self, fingerprints, classifications):
         """
 
@@ -20,8 +25,9 @@ class ScoringModel(ABC):
             must map to the 'fingerprints' elements
         :return:
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def predict(self, fingerprints):
         """
         After an eventual training, predict the
@@ -29,8 +35,7 @@ class ScoringModel(ABC):
         :param fingerprint:
         :return: The scores of the input fingerprints
         """
-
-        raise NotImplementedError
+        pass
 
 
 class LogisticScoring(ScoringModel):
@@ -39,6 +44,12 @@ class LogisticScoring(ScoringModel):
         # just pass all arguments forward, since this class acts mainly as a proxy
         # no argument checking is done beforehand, they are delegated as is to the sklearn implementation
         self._ml = LogisticRegression(**sklearn_kwargs)
+
+    @property
+    def name(self):
+        # TODO include params
+        # TODO build intermediate parent class with self._ml and name etc
+        return self._ml.__class__.__name__
 
     def train(self, fingerprints, classifications):
         self._ml.fit(fingerprints, classifications)
@@ -53,6 +64,11 @@ class RandomForestScoring(ScoringModel):
         # just pass all arguments forward, since this class acts mainly as a proxy
         # no argument checking is done beforehand, they are delegated as is to the sklearn implementation
         self._ml = RandomForestClassifier(**sklearn_kwargs)
+
+    @property
+    def name(self):
+        # TODO include params
+        return self._ml.__class__.__name__
 
     def train(self, fingerprints, classifications):
         # self._ml.fit(fingerprints, classifications)

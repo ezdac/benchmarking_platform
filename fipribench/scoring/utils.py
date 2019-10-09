@@ -36,7 +36,6 @@
 
 import operator
 
-
 # helper functions for the fusion
 import numpy
 from rdkit import DataStructs
@@ -81,7 +80,3 @@ def readMLFile(ml_dict, read_dict, filepath):
     return ml_dict
 
 
-def fp_vector_to_nparray(vector):
-    arr = numpy.zeros((3,), tree.DTYPE)
-    DataStructs.ConvertToNumpyArray(vector, arr)
-    return arr

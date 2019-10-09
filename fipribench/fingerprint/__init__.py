@@ -4,6 +4,8 @@
 # module to calculate a fingerprint from SMILES
 
 import subprocess
+
+
 from rdkit import Chem
 from rdkit.Chem import MACCSkeys, AllChem
 from rdkit.Avalon import pyAvalonTools as fpAvalon
@@ -12,6 +14,12 @@ from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem.ChemicalFeatures import BuildFeatureFactory
 from rdkit.Chem import rdMolDescriptors
 from rdkit.DataStructs.cDataStructs import UIntSparseIntVect
+from pure_contracts import ContractInterface
+from abc import abstractmethod
+from contracts import contract
+
+
+
 
 # FIXME don't hardcode this
 FIPRIHASH_PATH = '/Users/Max/coding/master/main.py'
@@ -34,6 +42,54 @@ PYTHON3_VERSION = '/Users/Max/.pyenv/versions/miniconda3-latest/envs/masterthesi
 nbits = 2048
 # TODO add longbits option to run config
 longbits = 16384
+
+
+class FingerprintInterface(ContractInterface):
+    """
+    Defines the interface the FingerprintMethod has to comply to.
+    Basically
+    """
+
+    @property
+    @abstractmethod
+    def name(self):
+        """
+              :rtype: str
+        """
+        pass
+
+    # FIXME check if this works together with the contract decorator
+    @contract
+    @abstractmethod
+    def train(self, molecules_smiles, classifications):
+        """
+            :param molecules_smiles: TODO
+            FIXME str is no basic type in contract
+             :type molecules_smiles: list[>0](string)
+
+            :param classifications: TODO
+             :type classifications: list[>0](int)
+
+              :rtype: None
+        """
+        pass
+
+    # FIXME check if this works together with the contract decorator
+    @contract
+    @abstractmethod
+    def calculate_fingerprint(self, smiles):
+        """
+            :param smiles: TODO
+             :type smiles: string
+
+              :rtype: array[>0](bool)
+        """
+        pass
+
+
+def class_implements_fingerprint_interface(klass):
+
+    return False
 
 # dictionary
 fpdict = {}
