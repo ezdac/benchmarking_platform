@@ -52,6 +52,14 @@ class FingerprintInterface(ContractInterface):
 
     @property
     @abstractmethod
+    def bit_size(self):
+        """
+              :rtype: str
+        """
+        pass
+
+    @property
+    @abstractmethod
     def name(self):
         """
               :rtype: str

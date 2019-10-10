@@ -95,6 +95,7 @@ class Config(BaseSettings):
     bitsize: int = 1024
     datasets: List[DataSetName] = ...
     number_query_molecules: NofQueryMolecules = ...
+    number_scoring_repetitions: int = 50
     # FIXME if this is missing, we get an error that's not informative for the user
     ml_models: MLModels = None
     similarity_measure : SimilarityMeasure = SimilarityMeasure.TANIMOTO

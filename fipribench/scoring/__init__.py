@@ -54,87 +54,77 @@
 
 # TODO refactor global configuration
 
-from fipribench.datasets import DataSet
-from fipribench.utils import fp_vector_to_nparray
-from fipribench.fingerprint import CalculateFP
-import pandas as pd
 import numpy as np
 import enlighten
+import time
 
 import logging
 
 LOGGER = logging.getLogger(__name__)
 
 
-def calculate_scored_lists(num_query_mols, fingerprint_method, outpath, simil_metric, scoring_model,
-                           target_name, dataset_name, datasets: DataSet, number_of_repetitions):
+def calculate_scored_lists(data, fingerprint_method, simil_metric, scoring_model, number_of_repetitions):
+    # FIXME why don't we use similarity metric??
+    # train the fingerprint method with all molecules marked for fingerprint training
+    nof_samples = data['smiles'].shape[0]
+    fp_training_indices = data['is_fp_training'].nonzero()
+    LOGGER.info(f"Start fingerprint training phase with "
+                f"{fp_training_indices[0].shape[0] / data['is_fp_training'].shape[0] * 100:.2f}% "
+                f"of scoring samples")
 
-            # TODO use the get_dataframe instead of all this np stuff in this function !!!
-            LOGGER.info(f"Start scoring for: target={target_name}, dataset={dataset_name}, similarity_metric={simil_metric},"
-                     f" fingerprint={fingerprint_method.name}")
-            data = datasets.get_dataframe(dataset_name, target_name, num_query_mols)
+    fingerprint_method.train(data['smiles'][fp_training_indices], data['is_active'][fp_training_indices].astype(int))
+    # TODO print info on training phase, #cluster blabla
+    LOGGER.info(f"Finished fingerprint training phase.")
 
-            # the last to columns' values are not shown in the debug output
-            LOGGER.debug(data[:5])
+    # now calculate all fingerprints
+    data['fingerprint'] = np.array(list(map(fingerprint_method.calculate_fingerprint, data['smiles'])))
+    LOGGER.info("Calculated all fingerprints.")
 
-            # train the fingerprint method with all molecules marked for fingerprint training
-            fp_training_data = data[data['is_training'] == True]
-            LOGGER.info(f"Start training phase with {fp_training_data.shape[1] / data.shape[1] * 100:.2f}% of scoring samples")
-            fingerprint_method.train(fp_training_data['smiles'], fp_training_data['is_active'].astype(int))
-            # TODO print info on training phasse, #cluster blabla
-            LOGGER.info(f"Finished training phase.")
+    test_data_indices = (~data['is_training']).nonzero()
+    training_data_indices = data['is_training'].nonzero()
 
-            # now calculate all fingerprints
-            data['fingerprint'] = data['smiles'].apply(fingerprint_method.calculate_fingerprint)
-            LOGGER.info("Calculated all fingerprints.")
+    # to store the scored lists
+    # FIXME check correct shape
 
-            test_data = data[data['is_training'] == False]
-            training_data = data[data['is_training'] == False]
+    # loop over repetitions
+    # progress_bar_manager = enlighten.get_manager()
+    # scoring_progress_bar = progress_bar_manager.counter(
+    #     total=number_of_repetitions,
+    #     desc='Iterate',
+    #     unit='iterations',
+    #     leave=False
+    # )
+    # scoring_progress_bar.refresh()
 
-            # to store the scored lists
-            # FIXME check correct shape
-            scores = np.empty((data.shape[0], 1))
+    scoring_list = []
+    # LOGGER.info(f"Training scoring model {scoring_model.name}, iteration={q + 1}")
+    # LOGGER.info(f"Predicting scores for test data, iteration={q + 1}")
+    LOGGER.info(f"Starting scoring, with {number_of_repetitions} iterations.")
+    for q in range(number_of_repetitions):
+        # XXX now they use the training set and the ys_fit to train a model of some kind
+        # fit logistic regression
 
-            # loop over repetitions
-            progress_bar_manager = enlighten.get_manager()
-            scoring_progress_bar = progress_bar_manager.counter(
-                total=number_of_repetitions,
-                desc='Scoring iterations',
-                unit='iterations',
-                leave=False
-            )
-            scoring_progress_bar.refresh()
-            for q in range(number_of_repetitions):
-                LOGGER.info(f"Training scoring model {scoring_model.name}, iteration={q + 1}")
-                # XXX now they use the training set and the ys_fit to train a model of some kind
-                # fit logistic regression
-                fingerprints = training_data['fingerprint'].to_numpy()
-                LOGGER.debug(fingerprints)
-                scoring_model.train(training_data['fingerprint'].values, training_data['is_active'].values)
+        scoring_model.train(data['fingerprint'][training_data_indices], data['is_active'][training_data_indices])
 
-                # rank test molecules based on probability
-                LOGGER.info(f"Predicting scores for test data, iteration={q + 1}")
-                predicted_scores = scoring_model.predict(test_data['fingerprint'])
-                # returns: array - like, shape = [n_samples, n_classes]
+        # rank test molecules based on probability
+        predicted_scores = scoring_model.predict(data['fingerprint'][test_data_indices])
+        # returns: array - like, shape = [n_samples, n_classes]
 
-                # store: [probability, internal ID, active/inactive]
-                # single_score = [[s[1], m[0], m[1]] for s, m in zip(predicted_scores, test_mols)]
-                scores = np.concatenate((predicted_scores[:, 1], scores), axis=1)
-                scoring_progress_bar.update()
+        # store: [probability, internal ID, active/inactive]
+        # single_score = [[s[1], m[0], m[1]] for s, m in zip(predicted_scores, test_mols)]
+        scoring_list.append(predicted_scores[:, 1])
+        # time.sleep(0.1)
+        # scoring_progress_bar.update()
+    LOGGER.info(f"Finished scoring.")
 
-            scoring_progress_bar.close()
-            # FIXME does this do "hstacking" on the dataframe?
-            LOGGER.info(f"Finish scoring for: target={target_name}, dataset={dataset_name}, similarity_metric={simil_metric},"
-                     f"fingerprint={fingerprint_method.name}")
-            data['scores'] = scores
+    # scoring_progress_bar.close()
+    # time.sleep(0.1)
 
+    # FIXME they sort one single score per run
+    # we can't do that if we append scores to our df, because we have to associate the scores to the testmols.
+    # FIXME is this equivalent to: single_score.sort(reverse=True)
+    # active_proba = np.flip(np.sort(predicted_scores[:, 1]))
+    # I think we should sort outside, when we actually need this!
 
-            # FIXME they sort one single score per run
-            # we can't do that if we append scores to our df, because we have to associate the scores to the testmols.
-            # FIXME is this equivalent to: single_score.sort(reverse=True)
-            # active_proba = np.flip(np.sort(predicted_scores[:, 1]))
-            # I think we should sort outside, when we actually need this!
-
-            return scores
-
-
+    # returns scores list, and corresponding internal_id array
+    return np.vstack(scoring_list), data['internal_id'][test_data_indices]

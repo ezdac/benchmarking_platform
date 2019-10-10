@@ -8,7 +8,7 @@ import pandas as pd
 MoleculeData = namedtuple('MoleculeData', 'internal_id external_id smiles')
 
 
-class DataSet():
+class DataSet:
     """
     Represents the dataset the scoring is performed over
     TODO make mapping dynamic, lookup path for dataset identifier
@@ -49,14 +49,13 @@ class DataSet():
             O=C(O)c1c(O)cc([N+](=O)[O-])cc1[N+](=O)[O-] CHEMBL447810 ChEMBL_15_A_1 True False True
         """
         training_list = list(self.get_training_list(dataset_name, target_name, num_query_mols))
-        # TODO
-        fp_training_list = self.get_fp_training_list(dataset_name, target_name, num_query_mols)
         actives = list(self.get_actives(dataset_name, target_name))
         decoys = list(self.get_decoys(dataset_name, target_name))
 
-        it = ((mol.smiles, mol.internal_id, mol.external_id) for mol in actives + decoys)
-
-        data = pd.DataFrame(it, columns=['smiles', 'internal_id', 'external_id'])
+        data = dict()
+        data['smiles'] = np.array([mol.smiles for mol in actives + decoys])
+        data['internal_id'] = np.array([mol.internal_id for mol in actives + decoys])
+        data['external_id'] = np.array([mol.external_id for mol in actives + decoys])
         data['is_active'] = np.concatenate((np.full(len(actives), True), np.full(len(decoys), False)))
 
         # active/decoy indices are not unique, and are defined per type (active, decoy)
@@ -71,11 +70,10 @@ class DataSet():
         )
 
         # TODO load from actual list!
+        fp_training_list = self.get_fp_training_list(dataset_name, target_name, num_query_mols)
         # for now, just define all molecules as fp-training input
-        data['is_fp_training'] = True
-
+        data['is_fp_training'] = np.full_like(data['is_training'], True)
         return data
-
 
     def get_fp_training_list(self, dataset_name, target_name, num_query_mols):
         # TODO

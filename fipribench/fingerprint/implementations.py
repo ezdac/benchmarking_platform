@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from fiprihash.fingerprint import FoldingHash, KMeansCHash
 from rdkit.Chem import AllChem
 from fipribench.utils import fp_vector_to_nparray
-import pandas
+import numpy
 
 
 class HashingMethod(ABC):
@@ -22,7 +22,7 @@ class HashingMethod(ABC):
         pass
 
     def __init__(self, bit_size, ecfp_radius, possible_classifications):
-        self._bit_size = bit_size
+        self.bit_size = bit_size
         # TODO provide all parameters from the init
         self._fingerprinter = self._fingerprinter_class(bitsize=bit_size, ecfp_radius=ecfp_radius,
                                                         possible_classifications=possible_classifications)
@@ -38,7 +38,7 @@ class HashingMethod(ABC):
             mol = AllChem.MolFromSmiles(smiles)
             # FIXME refactor testing assert
             assert classification in (0, 1)
-            mol.SetIntProp('classification', classification)
+            mol.SetIntProp('classification', classification.item())
             mols.append(mol)
         # train the fingerprinters internal LuT
         self._fingerprinter.train(mols)
