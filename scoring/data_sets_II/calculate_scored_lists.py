@@ -58,7 +58,7 @@ import configuration_file_II as conf
 
 # import functions for scoring step
 sys.path.insert(0, os.getcwd()+'/../')
-import scoring_functions as scor
+import scoring.scoring_functions as scor
 
 # paths
 cwd = os.getcwd()
