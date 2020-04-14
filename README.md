@@ -1,3 +1,11 @@
+Updated Usage
+==============
+
+Run the methods from within the corresponding folder (cwd should be there!).
+Use the docker file to create a (somewhat) reproducible environment. Although the packages
+used here are very old and this should be considered a hack to get the legacy version running.
+
+
 Benchmarking Platform
 =====================
 original version presented in 

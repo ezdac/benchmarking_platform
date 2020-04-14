@@ -59,7 +59,7 @@ import configuration_file_I as conf
 
 # import functions for scoring step
 sys.path.insert(0, os.getcwd()+'/../')
-import scoring_functions as scor
+import scoring.scoring_functions as scor
 
 # paths
 cwd = os.getcwd()
@@ -166,16 +166,34 @@ if __name__=='__main__':
                 # loop over fps
                 single_score = defaultdict(list)
                 for fp in fp_names:
+                    # query fps is a list of fingerprint bitvectors (see fp_dict[fp] below) for the fingerprint
+                    #   the test fingerprints will get compared (similarity) against
                     query_fps = [actives[i][1][fp] for i in training_list[:num_query_mols]]
                     # test_list: first actives then decoys
+                    # actives[i] describes the active compound 'mol'
+                    #  actives[i][0] or mol[0] is the internal id
+                    # acttives[i][1] retrieves the fp_dict created with scor.getFPDict(fp_names, line[2])
+                    # fp_dict[fp] retrieves the fingerprint (for fp, e.g. ecfp4) of mol, which is a (sparse) bitvect
                     test_fps = [[actives[i][0], actives[i][1][fp], 1] for i in test_list[:num_test_actives]]
                     test_fps += [[decoys[i][0], decoys[i][1][fp], 0] for i in test_list[num_test_actives:]]
+                    # TODO decide on what is the test/training split for fingerprint training in NN search.
+                    #  Originally, there is no such thing as a training set, since the fingerprints used here
+                    #   are not 'trained' in our sense, and all use either some hashing scheme or pretermined
+                    #   lookup keys that are not dependent on the used dataset but universally applicable for all
+                    #   drug-related datasets.
                     for tmp_mol in test_fps:
+                        # getBulkSimilarity already returns the scores in a sorted order!
                         tmp_score = scor.getBulkSimilarity(tmp_mol[1], query_fps, simil_metric)
-                        # use max fusion
+                        # use max fusion, only use the first (highest) of the sorted scores
                         # store : [similarity, internal ID, active/inactive]
+                        # for the fingerprint type fp, append to a list, where all the max rank
+                        # values of all fingerprints from the testset are stored
                         single_score[fp].append([tmp_score[0], tmp_mol[0], tmp_mol[2]]) 
                     # rank list according to similarity
+                    # sort the single score for this fingerprint, so that the max rank score for the molecule from the
+                    # testset with the highest rank for this fingerprint type comes first
+                    # this will simply store the single scores in sorted order instead of sorting inplace
+                    # append this sorted score to this list of sorted scores for every iteration (num_reps)!
                     scores[fp].append(sorted(single_score[fp], reverse=True))
 
             # write scores to file
@@ -184,6 +202,8 @@ if __name__=='__main__':
             else:
                 outfile = gzip.open(outpath+'/list_'+dataset+'_'+str(target)+'.pkl.gz', 'wb+') # binary format
             for fp in fp_names:
+                # dump the list of iterated score rankings to a list,
+                # for each fingerprint type
                 cPickle.dump([fp, scores[fp]], outfile, 2)
             outfile.close()
             print "scoring done and scored lists written"

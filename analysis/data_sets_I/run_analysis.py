@@ -57,10 +57,10 @@ import configuration_file_I as conf
 
 # import analysis function
 sys.path.insert(0, os.getcwd()+'/../')
-import analysis_functions as ana_func
+import analysis.analysis_functions as ana_func
 
 #paths
-cwd = os.getcwd()
+cwd = os.path.dirname(os.path.realpath(__file__))
 path = cwd+'/'
 
 
@@ -101,7 +101,7 @@ if __name__=='__main__':
         inpath = tmppath+'/'+dataset
 
         # loop over targets
-        for target in conf.set_data:
+        for target in conf.set_data[dataset]['ids']:
             print target
 
             # load results
@@ -140,7 +140,10 @@ if __name__=='__main__':
                     # average score file
                     tmp = []
                     for i in validation[m][k]:
+                        # XXX store the ranks for all iterations
+                        # CHECKME(those are the ranks for the method, e.g. if we have 2 methods, there can only be 2 ranks?
                         ranks[m][k].append(i[1]) # store ranks
+                        # CHECKME this might be the 'score' (ParamEvalMethod.runMethod())
                         tmp.append(i[0])
                     tmp = np.array(tmp)
                     ave = np.average(tmp)

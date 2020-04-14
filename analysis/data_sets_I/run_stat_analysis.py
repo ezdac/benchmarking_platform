@@ -55,7 +55,7 @@ import configuration_file_I as conf
 
 # import analysis functions
 sys.path.insert(0, os.getcwd()+'/../')
-import analysis_functions as ana_func
+import analysis.analysis_functions as ana_func
 
 # paths
 cwd = os.getcwd()

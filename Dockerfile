@@ -1,6 +1,7 @@
-FROM rgrubba/debian-squeeze
+#FROM rgrubba/debian-squeeze
+FROM debian:jessie
 
-RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install --force-yes -y \
+RUN apt-get update && apt-get install --force-yes -y \
  flex\
  bison\
  build-essential\
@@ -14,18 +15,14 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install --forc
  libboost-regex-dev\
 # swig2.0\
  wget\
- zip
- git\
+ zip\
+ git
 
-# make sure to use all the old legacy software available in Feb 2013;
-# e.g. CMake 3 is not the same API as used by this version, etc. etc.
-ENV RDKIT_BRANCH=Release_2013_03_2
 
-# TODO switch to old git version, where --single-branch was not present
-#   the rdkit repo seems to be very big as a whole!
-#RUN git clone -b $RDKIT_BRANCH --single-branch https://github.com/rdkit/rdkit.git
-
+RUN git clone -b modified2013_03 --single-branch https://github.com/ezdac/rdkit.git
 ENV RDBASE=/rdkit
+WORKDIR $RDBASE
+
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$RDBASE/lib
 ENV PYTHONPATH=$PYTHONPATH:$RDBASE
 
@@ -41,26 +38,34 @@ ADD inchi-api-source src/
 
 RUN mkdir $RDBASE/build
 WORKDIR $RDBASE/build
-#RUN cmake --trace --debug-output -Wdev -DRDK_BUILD_INCHI_SUPPORT=ON -DRDK_BUILD_AVALON_SUPPORT=ON ..
-#RUN make
-#RUN make install
+RUN cmake -DRDK_BUILD_INCHI_SUPPORT=ON -DRDK_BUILD_AVALON_SUPPORT=ON AVALONTOOLS_DIR=$AVALONTOOLS_DIR ..
+RUN make
+RUN make install
+#
 
-#
-## install dependencies for the benchmarking scripts
-#RUN apt-get install -y \
-#python-pip \
-#python-setuptools
-#
-#RUN apt-get install -y \
-#libatlas-base-dev \
-#gcc \
-#gfortran \
-#g++
-#
-#WORKDIR /
-#RUN pip install scipy==0.12.0
-#RUN pip install scikit-learn==0.13
-#
-#ADD . /benchmark
-#
-#WORKDIR /benchmark
+# install dependencies for the benchmarking scripts
+RUN apt-get install -y --force-yes \
+python-pip \
+python-setuptools
+
+RUN apt-get install -y --force-yes \
+libatlas-base-dev \
+gcc \
+gfortran \
+g++
+
+WORKDIR /
+RUN pip install scipy==0.12.0
+RUN pip install scikit-learn==0.13
+RUN pip install --upgrade setuptools
+
+RUN apt-get install -y \
+libevent-dev \
+libzmq-dev
+#python-all-dev
+
+RUN pip install greenlet zerorpc
+RUN pip install filelock
+
+ADD . /benchmark
+WORKDIR /benchmark
