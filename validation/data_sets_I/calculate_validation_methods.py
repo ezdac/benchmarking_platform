@@ -62,10 +62,10 @@ import configuration_file_I as conf
 
 # import validation functions
 sys.path.insert(0, os.getcwd()+'/../')
-import validation_functions as vfunc
+import validation.validation_functions as vfunc
 
 # paths
-cwd = os.getcwd()
+cwd = os.path.dirname(os.path.realpath(__file__))
 parentpath = cwd+'/../'
 path = cwd+'/'
 
@@ -125,7 +125,7 @@ if __name__=='__main__':
             # load scored lists
             scores = {}
             for inp in inpath: # loop over input paths
-                myfile = gzip.open(inp+'/list_'+dataset+'_'+str(target)+'_.pkl.gz', 'r')
+                myfile = gzip.open(inp+'/list_'+dataset+'_'+str(target)+'.pkl.gz', 'rb')
                 while 1:
                     try:
                         tmp = cPickle.load(myfile)

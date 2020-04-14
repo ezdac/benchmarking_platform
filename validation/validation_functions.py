@@ -160,6 +160,9 @@ class ParamEvalMethod(EvalMethod):
         for n in self.names: 
             results[n] = defaultdict(list)
     def runMethod(self, results, scores, query, index):
+        # XXX index is always -1, it is never called differently!
+        # XXX query means the current number of repetition / iteration!
+        #   it has nothing to do with the number of query mols parameter
         tmp_list = [[] for i in range(len(self.names))]
         # loop over fingerprints
         for k in scores.keys(): 
@@ -178,6 +181,11 @@ class ParamEvalMethod(EvalMethod):
 
 class EFMethod(ParamEvalMethod):
     def calculate(self, score, index):
+        # XXX since the index is always -1, we seem to only access single_score[-1],
+        #   which is int(is_active). The score array is sorted by single_score[0], which
+        #   is the score, and this is regarded in the EvalMethod (the methods are mostly based
+        #   on rank TP-rates etc.)
+        #   But this means that the 'extra' similarity score from the RF method (different then the other ML methods)
         return Scoring.CalcEnrichment(score,index,self.params)
 
 class BEDROCMethod(ParamEvalMethod):

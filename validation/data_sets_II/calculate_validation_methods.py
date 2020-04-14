@@ -62,7 +62,7 @@ import configuration_file_II as conf
 
 # import validation functions
 sys.path.insert(0, os.getcwd()+'/../')
-import validation_functions as vfunc
+import validation.validation_functions as vfunc
 
 # paths
 cwd = os.getcwd()
