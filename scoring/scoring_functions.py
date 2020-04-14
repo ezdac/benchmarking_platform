@@ -70,6 +70,10 @@ def checkQueryMols(num, list_num_query_mols):
     if num not in list_num_query_mols:
         raise ValueError('provided number of query molecules not supported:', num)
 
+def trainFP(fp_name, training_smiles):
+    if fp_name in fingerprint_lib.trainable_fps.keys():
+        fingerprint_lib.TrainFP(fp_name, training_smiles)
+
 def getFPDict(fp_names, smiles):
     '''Gets the fingerprints from the fingerprint library
     and stores them in a dictioanry'''
