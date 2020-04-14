@@ -7,6 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from scoring.data_sets_I.models import NearestNeighbourModel
 
 import configuration_file_I as conf
+
 # TODO make datasetI/II just an argument
 # TODO maybe include this here, but this takes some restructuring!
 # import configuration_file_II
@@ -16,20 +17,51 @@ from filelock import FileLock
 
 # prepare command-line option parser
 cli_parser = OptionParser("usage: %prog [options] arg")
-cli_parser.add_option("-n", "--num", dest="num", type="int", metavar="INT", help="number of query mols")
-cli_parser.add_option("-f", "--fingerprint", dest="fp", help="fingerprint to train ML model with")
-cli_parser.add_option("-o", "--outpath", dest="outpath", metavar="PATH", help="relative output PATH (default: pwd)")
-cli_parser.add_option("-s", "--similarity", dest="simil", type="string", metavar="NAME", help="NAME of similarity metric to use (default: Dice, other options are: Tanimoto, Cosine, Russel, Kulczynski, McConnaughey, Manhattan, RogotGoldberg")
-cli_parser.add_option("-m", "--ml", dest="ml", metavar="FILE", help="file containing the logistic regression info (default parameters: penalty=l2, dual=0 (false), C=1.0, fit_intercept=1 (true), intercept_scaling=1.0, class_weight=None, tol=0.0001)")
-cli_parser.add_option("-a", "--append", dest="do_append", action="store_true", help="append to the output file (default: False)")
+cli_parser.add_option(
+    "-n", "--num", dest="num", type="int", metavar="INT", help="number of query mols"
+)
+cli_parser.add_option(
+    "-f", "--fingerprint", dest="fp", help="fingerprint to train ML model with"
+)
+cli_parser.add_option(
+    "-o",
+    "--outpath",
+    dest="outpath",
+    metavar="PATH",
+    help="relative output PATH (default: pwd)",
+)
+cli_parser.add_option(
+    "-s",
+    "--similarity",
+    dest="simil",
+    type="string",
+    metavar="NAME",
+    help="NAME of similarity metric to use (default: Dice, other options are: Tanimoto, Cosine, Russel, Kulczynski, McConnaughey, Manhattan, RogotGoldberg",
+)
+cli_parser.add_option(
+    "-m",
+    "--ml",
+    dest="ml",
+    metavar="FILE",
+    help="file containing the logistic regression info (default parameters: penalty=l2, dual=0 (false), C=1.0, fit_intercept=1 (true), intercept_scaling=1.0, class_weight=None, tol=0.0001)",
+)
+cli_parser.add_option(
+    "-a",
+    "--append",
+    dest="do_append",
+    action="store_true",
+    help="append to the output file (default: False)",
+)
+
 
 def get_cwd_from_file_path():
     return os.path.dirname(os.path.realpath(__file__))
 
+
 CWD = get_cwd_from_file_path()
-PARENT_PATH = CWD + '/../../'
-INPATH_CMP = PARENT_PATH + 'compounds/'
-INPATH_LIST = PARENT_PATH + 'query_lists/data_sets_I/'
+PARENT_PATH = CWD + "/../../"
+INPATH_CMP = PARENT_PATH + "compounds/"
+INPATH_LIST = PARENT_PATH + "query_lists/data_sets_I/"
 
 
 def run_scoring(options, ml_model, path, ml_name_prefix):
@@ -39,21 +71,24 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
         num_query_mols = options.num
         fp_build = options.fp
     else:
-        raise RuntimeError('one or more of the required options was not given!')
+        raise RuntimeError("one or more of the required options was not given!")
 
     # optional arguments
     do_append = False
-    if options.do_append: do_append = options.do_append
-    simil_metric = 'Dice'
-    if options.simil: simil_metric = options.simil
+    if options.do_append:
+        do_append = options.do_append
+    simil_metric = "Dice"
+    if options.simil:
+        simil_metric = options.simil
     outpath = path
     outpath_set = False
     if options.outpath:
         outpath_set = True
-        outpath = path+options.outpath
+        outpath = path + options.outpath
 
     # check for sensible input
-    if outpath_set: scor.checkPath(outpath, 'output')
+    if outpath_set:
+        scor.checkPath(outpath, "output")
     scor.checkSimil(simil_metric)
     scor.checkQueryMols(num_query_mols, conf.list_num_query_mols)
 
@@ -64,20 +99,7 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
     # loop over data-set sources
     for dataset in conf.set_data.keys():
         print dataset
-        # loop over targets
-        # FIXME remove debug
-        if break_now_outer is True:
-            break
-
-        # only iterate once
-        break_now_outer = True
-        break_now_inner = False
-        for target in conf.set_data[dataset]['ids']:
-            # FIXME remove debug
-            if break_now_inner is True:
-                break
-            # only loop one target!
-            break_now_inner = True
+        for target in conf.set_data[dataset]["ids"]:
 
             print target
 
@@ -95,10 +117,16 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
 
             # test fps and molecule info, exclude the training molecules from the test-set
             #   (-> if i not in training_list ... )
-            test_list = [i for i in range(num_actives) if i not in training_list[:num_query_mols]]
-            test_list += [i for i in range(num_decoys) if i not in training_list[num_query_mols:]]
+            test_list = [
+                i for i in range(num_actives) if i not in training_list[:num_query_mols]
+            ]
+            test_list += [
+                i for i in range(num_decoys) if i not in training_list[num_query_mols:]
+            ]
 
-            training_smiles = get_training_smiles(actives_id_smiles, decoys_id_smiles, num_query_mols, training_list)
+            training_smiles = get_training_smiles(
+                actives_id_smiles, decoys_id_smiles, num_query_mols, training_list
+            )
             print "Training fingerprints, this can take some time:"
             # XXX This will work with training the fingerprints on the fly, instructing the fiprihash process
             #   over IPC to start the training. Since this is blocking and won't train multiple datasets,
@@ -114,7 +142,7 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
 
             # list with active/inactive info, prepare the target vector, where 'num_query_mols' of actives '1' are
             # present
-            ys_fit = [1]*num_query_mols + [0]*(len(training_list)-num_query_mols)
+            ys_fit = [1] * num_query_mols + [0] * (len(training_list) - num_query_mols)
 
             # the pre-calculated fingerprint bitvectors for all the training molecules
             train_fps_actives = [actives[i][1] for i in training_list[:num_query_mols]]
@@ -132,21 +160,28 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
             scores = defaultdict(list)
             # loop over repetitions
             for q in range(conf.num_reps):
-                single_score = calculate_single_score(ml_model, ys_fit, train_fps_actives,train_fps_decoys, test_fps,
-                                                      test_mols, simil_metric)
-                scores[ml_name_prefix + '_'+fp_build].append(single_score)
+                single_score = calculate_single_score(
+                    ml_model,
+                    ys_fit,
+                    train_fps_actives,
+                    train_fps_decoys,
+                    test_fps,
+                    test_mols,
+                    simil_metric,
+                )
+                scores[ml_name_prefix + "_" + fp_build].append(single_score)
 
             # use a filelock, so that no corruption can occur when multiple processes try to append to the file
             # XXX When this crashes before the lock is released, the lock has to be removed manually!
-            out_file_path = outpath+'/list_'+dataset+'_'+str(target)+'.pkl.gz'
+            out_file_path = outpath + "/list_" + dataset + "_" + str(target) + ".pkl.gz"
 
             lock = FileLock(out_file_path + ".lock")
             lock.acquire()
             try:
                 if do_append:
-                    outfile = gzip.open(out_file_path, 'ab+') # binary format
+                    outfile = gzip.open(out_file_path, "ab+")  # binary format
                 else:
-                    outfile = gzip.open(out_file_path, 'wb+') # binary format
+                    outfile = gzip.open(out_file_path, "wb+")  # binary format
                 for fp_name, score in scores.items():
                     cPickle.dump([fp_name, score], outfile, 2)
                 outfile.close()
@@ -157,9 +192,18 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
 
             print "scoring done and scored lists written"
 
+
 # TODO
 #   - in the main function, the pickle dumping is done complying with the format in the calculate_scored_lists_bak.py.
-def calculate_single_score(ml_model, ys_fit, train_fps_actives, train_fps_decoys, test_fps, test_mols, simil_metric):
+def calculate_single_score(
+    ml_model,
+    ys_fit,
+    train_fps_actives,
+    train_fps_decoys,
+    test_fps,
+    test_mols,
+    simil_metric,
+):
     add_similarity_to_ml_score = False
     calculate_similarity = False
     train_fps = train_fps_actives + train_fps_decoys
@@ -196,13 +240,23 @@ def calculate_single_score(ml_model, ys_fit, train_fps_actives, train_fps_decoys
             # store: [probability, similarity, internal ID, active/inactive]
             # XXX SORT ONLY THE FIRST VALUE (COULD OTHERWISE BE SECONDAY SORTED BY INTERNAL_ID),
             #   since this is done in the original script and could change the rank order otherwise
-            similarity = [elem[0] for elem in sorted(single_similarities, reverse=True, key=lambda x: x[0])]
-            single_score = [[score[1], simil, test_mol[0], test_mol[1]] for score, simil, test_mol in \
-                            zip(scores, similarity, test_mols)]
+            similarity = [
+                elem[0]
+                for elem in sorted(
+                    single_similarities, reverse=True, key=lambda x: x[0]
+                )
+            ]
+            single_score = [
+                [score[1], simil, test_mol[0], test_mol[1]]
+                for score, simil, test_mol in zip(scores, similarity, test_mols)
+            ]
     else:
         # this is for all other ML methods (LR, NB), don't include the NN in the scores
         # store: [probability, internal ID, active/inactive]
-        single_score = [[score[1], test_mol[0], test_mol[1]] for score, test_mol in zip(scores, test_mols)]
+        single_score = [
+            [score[1], test_mol[0], test_mol[1]]
+            for score, test_mol in zip(scores, test_mols)
+        ]
     single_score.sort(reverse=True)
     return single_score
 
@@ -221,7 +275,9 @@ def calc_fingerprints(id_smiles, fp_build):
     return fingerprints
 
 
-def get_training_smiles(actives_id_smiles, decoys_id_smiles, num_query_mols, training_list):
+def get_training_smiles(
+    actives_id_smiles, decoys_id_smiles, num_query_mols, training_list
+):
     # gather all smiles for the training molecules:
     training_smiles = [actives_id_smiles[i][1] for i in training_list[:num_query_mols]]
     training_smiles += [decoys_id_smiles[i][1] for i in training_list[num_query_mols:]]
@@ -231,24 +287,51 @@ def get_training_smiles(actives_id_smiles, decoys_id_smiles, num_query_mols, tra
 def read_training_list(dataset, num_query_mols, target):
     # open training lists
     training_input = open(
-        INPATH_LIST + dataset + '/training_' + dataset + '_' + str(target) + '_' + str(num_query_mols) + '.pkl', 'r')
+        INPATH_LIST
+        + dataset
+        + "/training_"
+        + dataset
+        + "_"
+        + str(target)
+        + "_"
+        + str(num_query_mols)
+        + ".pkl",
+        "r",
+    )
     training_list = cPickle.load(training_input)
     return training_list
 
 
 def read_molecules_from_file(dataset, target, actives):
     if actives is True:
-        path = INPATH_CMP + dataset + '/cmp_list_' + dataset + '_' + str(target) + '_actives.dat.gz'
+        path = (
+            INPATH_CMP
+            + dataset
+            + "/cmp_list_"
+            + dataset
+            + "_"
+            + str(target)
+            + "_actives.dat.gz"
+        )
     else:
-        if dataset == 'ChEMBL':
-            path = INPATH_CMP + dataset + '/cmp_list_' + dataset + '_zinc_decoys.dat.gz'
+        if dataset == "ChEMBL":
+            path = INPATH_CMP + dataset + "/cmp_list_" + dataset + "_zinc_decoys.dat.gz"
         else:
-            path = INPATH_CMP + dataset + '/cmp_list_' + dataset + '_' + str(target) + '_decoys.dat.gz'
+            path = (
+                INPATH_CMP
+                + dataset
+                + "/cmp_list_"
+                + dataset
+                + "_"
+                + str(target)
+                + "_decoys.dat.gz"
+            )
 
     id_smiles = []
-    for line in gzip.open(path, 'r'):
-        if line[0] != '#':
+    for line in gzip.open(path, "r"):
+        if line[0] != "#":
             # structure of line: [external ID, internal ID, SMILES]]
             line = line.rstrip().split()
             id_smiles.append((line[1], line[2]))
     return id_smiles
+
