@@ -63,10 +63,10 @@ import configuration_file_I as conf
 
 # import functions for scoring step
 sys.path.insert(0, os.getcwd() + "/../")
-import scoring_functions as scor
+import scoring.scoring_functions as scor
 
 # import ML functions
-import ml_functions_13 as ml_func
+import scoring.ml_functions_13 as ml_func
 
 # paths
 from scoring.utils import get_cwd_from_file_path
