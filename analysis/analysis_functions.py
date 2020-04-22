@@ -47,7 +47,7 @@ def checkPath(filepath):
 def writeHeader(outfile, mk):
     """Writes a header to a file"""
     outfile.write("# ")
-    outfile.writelines("%s std_%s " % k for k in mk)
+    outfile.writelines("{0} std_{0} ".format(str(k)) for k in mk)
     outfile.write("\r\n")  # for Windows
 
 
