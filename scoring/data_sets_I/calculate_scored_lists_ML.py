@@ -1,6 +1,7 @@
 import os
 import cPickle
 import gzip
+import re
 from collections import defaultdict
 
 from sklearn.ensemble import RandomForestClassifier
@@ -90,13 +91,22 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
         outpath_set = True
         outpath = path + options.outpath
 
-    process_target_list = None
+    process_target_list = []
     if options.filter_file:
         filter_file = path + options.filter_file
         with open(filter_file, "r") as f:
-            process_target_list = [
-                (ds, target) for ds, target in f.readlines().split(",")
-            ]
+            for line in f.readlines():
+                dataset, target = tuple(
+                    map(lambda x: re.sub(r"[\n\t\s]*", "", x), line.split(","))
+                )
+                # the MUV and ChEMBL targets are ints, not strings!
+                try:
+                    target = int(target)
+                except ValueError:
+                    # keep it a string, but sould be DUD
+                    pass
+                process_target_list.append((dataset, target))
+        print "Only processing following targets: {0}".format(process_target_list)
 
     # check for sensible input
     if outpath_set:
@@ -115,7 +125,7 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
 
             # only process those (dataset, target) combinations
             # that are provided, if there is a list present
-            if process_target_list is not None:
+            if process_target_list:
                 if (dataset, target) not in process_target_list:
                     continue
 
