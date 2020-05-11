@@ -36,7 +36,8 @@ cli_parser.add_option(
     dest="simil",
     type="string",
     metavar="NAME",
-    help="NAME of similarity metric to use (default: Dice, other options are: Tanimoto, Cosine, Russel, Kulczynski, McConnaughey, Manhattan, RogotGoldberg",
+    help="NAME of similarity metric to use (default: Dice, other options are: \
+    Tanimoto, Cosine, Russel, Kulczynski, McConnaughey, Manhattan, RogotGoldberg",
 )
 cli_parser.add_option(
     "-m", "--ml", dest="ml", metavar="FILE", help="file containing the ",
@@ -49,9 +50,13 @@ cli_parser.add_option(
     help="append to the output file (default: False)",
 )
 cli_parser.add_option(
-    "-x", "--filter", dest="filter_file", metavar="FILE", help="File containing (dataset, target)
-    tuples describing what targets to use",
+    "-x",
+    "--filter",
+    dest="filter_file",
+    metavar="FILE",
+    help="File containing (dataset, target) tuples describing what targets to use",
 )
+
 
 def get_cwd_from_file_path():
     return os.path.dirname(os.path.realpath(__file__))
@@ -88,9 +93,10 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
     process_target_list = None
     if options.filter_file:
         filter_file = path + options.filter_file
-        with open(filter_file, 'r') as f:
-            process_target_list = [(ds, target) for ds, target in 
-                                   f.readlines().split(',')]
+        with open(filter_file, "r") as f:
+            process_target_list = [
+                (ds, target) for ds, target in f.readlines().split(",")
+            ]
 
     # check for sensible input
     if outpath_set:
