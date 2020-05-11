@@ -39,11 +39,7 @@ cli_parser.add_option(
     help="NAME of similarity metric to use (default: Dice, other options are: Tanimoto, Cosine, Russel, Kulczynski, McConnaughey, Manhattan, RogotGoldberg",
 )
 cli_parser.add_option(
-    "-m",
-    "--ml",
-    dest="ml",
-    metavar="FILE",
-    help="file containing the logistic regression info (default parameters: penalty=l2, dual=0 (false), C=1.0, fit_intercept=1 (true), intercept_scaling=1.0, class_weight=None, tol=0.0001)",
+    "-m", "--ml", dest="ml", metavar="FILE", help="file containing the ",
 )
 cli_parser.add_option(
     "-a",
@@ -52,7 +48,10 @@ cli_parser.add_option(
     action="store_true",
     help="append to the output file (default: False)",
 )
-
+cli_parser.add_option(
+    "-x", "--filter", dest="filter_file", metavar="FILE", help="File containing (dataset, target)
+    tuples describing what targets to use",
+)
 
 def get_cwd_from_file_path():
     return os.path.dirname(os.path.realpath(__file__))
@@ -86,6 +85,13 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
         outpath_set = True
         outpath = path + options.outpath
 
+    process_target_list = None
+    if options.filter_file:
+        filter_file = path + options.filter_file
+        with open(filter_file, 'r') as f:
+            process_target_list = [(ds, target) for ds, target in 
+                                   f.readlines().split(',')]
+
     # check for sensible input
     if outpath_set:
         scor.checkPath(outpath, "output")
@@ -100,6 +106,12 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
     for dataset in conf.set_data.keys():
         print dataset
         for target in conf.set_data[dataset]["ids"]:
+
+            # only process those (dataset, target) combinations
+            # that are provided, if there is a list present
+            if process_target_list is not None:
+                if (dataset, target) not in process_target_list:
+                    continue
 
             print target
 

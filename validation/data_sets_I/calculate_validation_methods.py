@@ -7,7 +7,7 @@
 #
 # INPUT
 # required:
-# -m [] : file containing the methods 
+# -m [] : file containing the methods
 #         implemented methods are: AUC, BEDROC ([alpha] optional),
 #         RIE ([alpha] optional), EF ([percentage] optional)
 # optional:
@@ -23,19 +23,19 @@
 #
 #  Copyright (c) 2013, Novartis Institutes for BioMedical Research Inc.
 #  All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
-# met: 
+# met:
 #
-#     * Redistributions of source code must retain the above copyright 
+#     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above
-#       copyright notice, this list of conditions and the following 
-#       disclaimer in the documentation and/or other materials provided 
+#       copyright notice, this list of conditions and the following
+#       disclaimer in the documentation and/or other materials provided
 #       with the distribution.
-#     * Neither the name of Novartis Institutes for BioMedical Research Inc. 
-#       nor the names of its contributors may be used to endorse or promote 
+#     * Neither the name of Novartis Institutes for BioMedical Research Inc.
+#       nor the names of its contributors may be used to endorse or promote
 #       products derived from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -57,53 +57,79 @@ from optparse import OptionParser
 from rdkit.ML.Scoring import Scoring
 
 # import configuration file with global variables
-sys.path.insert(0, os.getcwd()+'/../../')
+sys.path.insert(0, os.getcwd() + "/../../")
 import configuration_file_I as conf
 
 # import validation functions
-sys.path.insert(0, os.getcwd()+'/../')
+sys.path.insert(0, os.getcwd() + "/../")
 import validation.validation_functions as vfunc
 
 # paths
 cwd = os.path.dirname(os.path.realpath(__file__))
-parentpath = cwd+'/../'
-path = cwd+'/'
+parentpath = cwd + "/../"
+path = cwd + "/"
 
 # prepare command-line option parser
 usage = "usage: %prog [options] arg"
 parser = OptionParser(usage)
-parser.add_option("-m", "--methods", dest="filename", metavar="FILE", help="FILE containing the methods")
-parser.add_option("-i", "--inpath", action="append", dest="inpath", metavar="PATH", help="relative input PATH (default: pwd/../scoring)")
-parser.add_option("-o", "--outpath", dest="outpath", metavar="PATH", help="relative output PATH (default: pwd)")
-parser.add_option("-r", "--remove", dest="rm_file", metavar="FILE", help="FILE containing the fingerprints to be left out (default: all fingerprints are read)")
+parser.add_option(
+    "-m",
+    "--methods",
+    dest="filename",
+    metavar="FILE",
+    help="FILE containing the methods",
+)
+parser.add_option(
+    "-i",
+    "--inpath",
+    action="append",
+    dest="inpath",
+    metavar="PATH",
+    help="relative input PATH (default: pwd/../scoring)",
+)
+parser.add_option(
+    "-o",
+    "--outpath",
+    dest="outpath",
+    metavar="PATH",
+    help="relative output PATH (default: pwd)",
+)
+parser.add_option(
+    "-r",
+    "--remove",
+    dest="rm_file",
+    metavar="FILE",
+    help="FILE containing the fingerprints to be left out (default: all fingerprints are read)",
+)
 
 
 ######################## MAIN PART ###########################
-if __name__=='__main__':
+if __name__ == "__main__":
 
     # read in command line options
     (options, args) = parser.parse_args()
     # required arguments
     if options.filename:
-        methods_file = path+options.filename
+        methods_file = path + options.filename
     else:
-        raise RuntimeError('one or more of the required options was not given!')
+        raise RuntimeError("one or more of the required options was not given!")
     # read method file
     method_dict = vfunc.readMethods(methods_file)
-    if not method_dict: raise ValueError('No methods given in', methods_file)
+    if not method_dict:
+        raise ValueError("No methods given in", methods_file)
 
     # optional arguments
-    inpath = parentpath+'scoring/'
-    if options.inpath: 
-        inpath = [path+i for i in options.inpath]
+    inpath = parentpath + "scoring/"
+    if options.inpath:
+        inpath = [path + i for i in options.inpath]
         vfunc.checkPaths(inpath)
     outpath = path
-    if options.outpath: 
-        outpath = path+options.outpath
+    if options.outpath:
+        outpath = path + options.outpath
         vfunc.checkPaths([outpath])
     remove_fps = []
     if options.rm_file:
-        remove_fps = vfunc.readFPs(path+options.rm_file)
+        remove_fps = vfunc.readFPs(path + options.rm_file)
 
     # print input parameters
     vfunc.printInputParam(method_dict, inpath)
@@ -115,17 +141,23 @@ if __name__=='__main__':
     for dataset in conf.set_data.keys():
         print dataset
         # output directory
-        outdir = outpath+'/'+dataset
-        if not os.path.exists(outdir): os.makedirs(outdir)
+        outdir = outpath + "/" + dataset
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
 
         # loop over targets
-        for target in conf.set_data[dataset]['ids']:
+        for target in conf.set_data[dataset]["ids"]:
             print target
+
+            # FIXME eventually we need to implement a target / filter file check
+            # here as well!
 
             # load scored lists
             scores = {}
-            for inp in inpath: # loop over input paths
-                myfile = gzip.open(inp+'/list_'+dataset+'_'+str(target)+'.pkl.gz', 'rb')
+            for inp in inpath:  # loop over input paths
+                myfile = gzip.open(
+                    inp + "/list_" + dataset + "_" + str(target) + ".pkl.gz", "rb"
+                )
                 while 1:
                     try:
                         tmp = cPickle.load(myfile)
@@ -150,13 +182,13 @@ if __name__=='__main__':
             # loop of repetitions
             for q in range(conf.num_reps):
                 # loop over evaluation methods
-                for m in method_dict.keys(): 
+                for m in method_dict.keys():
                     method_dict[m].runMethod(results, scores, q, -1)
 
             print "validation methods calculated"
 
             # write results
-            outf = gzip.open(outdir+'/validation_'+str(target)+'.pkl.gz', 'wb+')
+            outf = gzip.open(outdir + "/validation_" + str(target) + ".pkl.gz", "wb+")
             cPickle.dump(results, outf, 2)
             outf.close()
 
