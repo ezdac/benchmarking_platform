@@ -118,13 +118,17 @@ if __name__ == "__main__":
         for target in conf.set_data[dataset]["ids"]:
             print target
 
-            # FIXME eventually we have to run a target / filter file check here
-            # as well, if in the previous runs filter files were used
+            # This catches when there are targets missing (e.g. because a filter
+            # file has been provided to the scoring)
+            # CHECK if missing targets have influence on the results
 
             # load results
-            validation = cPickle.load(
-                gzip.open(inpath + "/validation_" + str(target) + ".pkl.gz", "r")
-            )
+            validation_file_path = inpath + "/validation_" + str(target) + ".pkl.gz"
+            try:
+                validation = cPickle.load(gzip.open(validation_file_path, "r"))
+            except IOError:
+                print "File not found, skipping!"
+                continue
             methodkeys = validation.keys()
             fpkeys = validation[methodkeys[0]].keys()
 

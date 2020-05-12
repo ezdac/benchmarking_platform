@@ -154,10 +154,18 @@ if __name__ == "__main__":
 
             # load scored lists
             scores = {}
+            processed_any_path = False
             for inp in inpath:  # loop over input paths
-                myfile = gzip.open(
-                    inp + "/list_" + dataset + "_" + str(target) + ".pkl.gz", "rb"
+                # If not all lists were scored before, this raises an IOError,
+                # CHECKME does this cause errors in the compuation of the validation
+                #   when certain targets are missing?
+                scored_list_path = (
+                    inp + "/list_" + dataset + "_" + str(target) + ".pkl.gz"
                 )
+                try:
+                    myfile = gzip.open(scored_list_path, "rb")
+                except IOError:
+                    continue
                 while 1:
                     try:
                         tmp = cPickle.load(myfile)
@@ -169,6 +177,11 @@ if __name__ == "__main__":
                             tmp[0] = vfunc.getName(tmp[0], scores.keys())
                             # input line: [fp_name, list of scored lists]
                             scores[tmp[0]] = tmp[1]
+                processed_any_path = True
+            if not processed_any_path:
+                print "No files for target found, skipping!"
+                continue
+
             print "scored lists read in"
             if printfp:
                 vfunc.printFPs(scores.keys())
