@@ -74,7 +74,7 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
     # required arguments
     if options.num and options.fp:
         num_query_mols = options.num
-        fp_build = options.fp
+        fp_name = options.fp
     else:
         raise RuntimeError("one or more of the required options was not given!")
 
@@ -161,64 +161,81 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
             #   it is best to use a pretrained cache database for the fiprihash process, in order to speedup the
             #   training process significantly
             # Train the fingerprints with the training set, and not the full dataset!
-            scor.trainFP(fp_build, training_smiles)
 
-            actives = calc_fingerprints(actives_id_smiles, fp_build)
-            decoys = calc_fingerprints(decoys_id_smiles, fp_build)
+            # the provided can trigger other actions like retrieving multiple
+            # fingerprinter with derived parameters from the cache.
+            # What FPs have been retrieved from the cache will be determined by
+            # the remote fingerprinter.
+            # It will return names of fingerprints that are valid and
+            # derived from the input name!
+            fp_names = scor.trainFP(fp_name, training_smiles)
 
-            print "molecules read in and fingerprints calculated"
+            for fp_build in fp_names:
 
-            # list with active/inactive info, prepare the target vector, where 'num_query_mols' of actives '1' are
-            # present
-            ys_fit = [1] * num_query_mols + [0] * (len(training_list) - num_query_mols)
+                actives = calc_fingerprints(actives_id_smiles, fp_build)
+                decoys = calc_fingerprints(decoys_id_smiles, fp_build)
 
-            # the pre-calculated fingerprint bitvectors for all the training molecules
-            train_fps_actives = [actives[i][1] for i in training_list[:num_query_mols]]
-            train_fps_decoys = [decoys[i][1] for i in training_list[num_query_mols:]]
+                print "molecules read in and fingerprints calculated"
 
-            # the pre-calculated fingerprint bitvectors for all the test molecules
-            test_fps = [actives[i][1] for i in test_list[:num_test_actives]]
-            test_fps += [decoys[i][1] for i in test_list[num_test_actives:]]
-
-            # the internal ID and active/inactive bool for all the test molecules
-            test_mols = [[actives[i][0], 1] for i in test_list[:num_test_actives]]
-            test_mols += [[decoys[i][0], 0] for i in test_list[num_test_actives:]]
-
-            # to store the scored lists
-            scores = defaultdict(list)
-            # loop over repetitions
-            for q in range(conf.num_reps):
-                single_score = calculate_single_score(
-                    ml_model,
-                    ys_fit,
-                    train_fps_actives,
-                    train_fps_decoys,
-                    test_fps,
-                    test_mols,
-                    simil_metric,
+                # list with active/inactive info, prepare the target vector, where 'num_query_mols' of actives '1' are
+                # present
+                ys_fit = [1] * num_query_mols + [0] * (
+                    len(training_list) - num_query_mols
                 )
-                scores[ml_name_prefix + "_" + fp_build].append(single_score)
 
-            # use a filelock, so that no corruption can occur when multiple processes try to append to the file
-            # XXX When this crashes before the lock is released, the lock has to be removed manually!
-            out_file_path = outpath + "/list_" + dataset + "_" + str(target) + ".pkl.gz"
+                # the pre-calculated fingerprint bitvectors for all the training molecules
+                train_fps_actives = [
+                    actives[i][1] for i in training_list[:num_query_mols]
+                ]
+                train_fps_decoys = [
+                    decoys[i][1] for i in training_list[num_query_mols:]
+                ]
 
-            lock = FileLock(out_file_path + ".lock")
-            lock.acquire()
-            try:
-                if do_append:
-                    outfile = gzip.open(out_file_path, "ab+")  # binary format
-                else:
-                    outfile = gzip.open(out_file_path, "wb+")  # binary format
-                for fp_name, score in scores.items():
-                    cPickle.dump([fp_name, score], outfile, 2)
-                outfile.close()
-            finally:
-                # FIXME the lockfile is not deleted automatically - this is not a big problem, since
-                #   everything is functional with the lockfiles in place
-                lock.release()
+                # the pre-calculated fingerprint bitvectors for all the test molecules
+                test_fps = [actives[i][1] for i in test_list[:num_test_actives]]
+                test_fps += [decoys[i][1] for i in test_list[num_test_actives:]]
 
-            print "scoring done and scored lists written"
+                # the internal ID and active/inactive bool for all the test molecules
+                test_mols = [[actives[i][0], 1] for i in test_list[:num_test_actives]]
+                test_mols += [[decoys[i][0], 0] for i in test_list[num_test_actives:]]
+
+                # to store the scored lists
+                scores = defaultdict(list)
+                # loop over repetitions
+                for q in range(conf.num_reps):
+                    single_score = calculate_single_score(
+                        ml_model,
+                        ys_fit,
+                        train_fps_actives,
+                        train_fps_decoys,
+                        test_fps,
+                        test_mols,
+                        simil_metric,
+                    )
+                    scores[ml_name_prefix + "_" + fp_build].append(single_score)
+
+                # use a filelock, so that no corruption can occur when multiple processes try to append to the file
+                # XXX When this crashes before the lock is released, the lock has to be removed manually!
+                out_file_path = (
+                    outpath + "/list_" + dataset + "_" + str(target) + ".pkl.gz"
+                )
+
+                lock = FileLock(out_file_path + ".lock")
+                lock.acquire()
+                try:
+                    if do_append:
+                        outfile = gzip.open(out_file_path, "ab+")  # binary format
+                    else:
+                        outfile = gzip.open(out_file_path, "wb+")  # binary format
+                    for fp_name, score in scores.items():
+                        cPickle.dump([fp_name, score], outfile, 2)
+                    outfile.close()
+                finally:
+                    # FIXME the lockfile is not deleted automatically - this is not a big problem, since
+                    #   everything is functional with the lockfiles in place
+                    lock.release()
+
+                print "scoring done and scored lists written"
 
 
 # TODO
