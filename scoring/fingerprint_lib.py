@@ -135,7 +135,7 @@ def make_series_fingerprinter(seed_fp, k_values):
 
     clustered_region_size = int(seed_fp.get_fingerprint_params()["nof_clusters"])
     k_values = [k for k in sorted(k_values) if k < clustered_region_size]
-    k_values = k_values.reverse()
+    k_values.reverse()
 
     k_deltas = []
     current_k = clustered_region_size
@@ -274,6 +274,7 @@ def TrainFP(fp_name, all_train_smiles):
             interval_step = int(elements[5])
             k_values = range(0, bit_size + 1, interval_step)
             series_fps = make_series_fingerprinter(seed_fp, k_values)
+            # FIXME can be None
 
             names = []
             for k_val, fp in series_fps.items():
