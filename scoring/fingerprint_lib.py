@@ -133,9 +133,7 @@ class RemoteFingerprinter:
 
 def make_series_fingerprinter(seed_fp, k_values):
 
-    clustered_region_size = int(
-        seed_fp.get_fingerprint_params()["clustered_region_size"]
-    )
+    clustered_region_size = int(seed_fp.get_fingerprint_params()["nof_clusters"])
     k_values = [k for k in sorted(k_values) if k < clustered_region_size]
     k_values = k_values.reverse()
 
