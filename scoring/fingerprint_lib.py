@@ -270,7 +270,7 @@ def TrainFP(fp_name, all_train_smiles):
 
     base_name = "_".join(elements[1:4])
 
-    if len(elements > 4):
+    if len(elements) > 4:
         # this is a series fingerprint
         if elements[4] == "series":
             interval_step = elements[4]
