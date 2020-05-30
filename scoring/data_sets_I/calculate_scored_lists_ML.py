@@ -228,8 +228,8 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
                         outfile = gzip.open(out_file_path, "ab+")  # binary format
                     else:
                         outfile = gzip.open(out_file_path, "wb+")  # binary format
-                    for fp_name, score in scores.items():
-                        cPickle.dump([fp_name, score], outfile, 2)
+                    for fipri_name, score in scores.items():
+                        cPickle.dump([fipri_name, score], outfile, 2)
                     outfile.close()
                 finally:
                     # FIXME the lockfile is not deleted automatically - this is not a big problem, since

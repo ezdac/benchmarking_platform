@@ -94,6 +94,7 @@ def trainFP(fp_name, training_smiles):
 
 
     """
+    print "Checking if training is necessary for ", fp_name
     return fingerprint_lib.TrainFP(fp_name, training_smiles)
 
 

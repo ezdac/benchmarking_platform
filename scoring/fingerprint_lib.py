@@ -244,7 +244,7 @@ def TrainFP(fp_name, all_train_smiles):
     # fiprihash prefix is required
     if elements[0] != "fiprihash":
         # we don't have to train this, it's not trainable
-        return
+        return [fp_name]
 
     fingerprinter_type = elements[1]
     ecfp_radius = int(elements[2])
