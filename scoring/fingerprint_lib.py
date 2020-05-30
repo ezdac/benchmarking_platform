@@ -278,7 +278,7 @@ def TrainFP(fp_name, all_train_smiles):
 
             names = []
             for k_val, fp in series_fps.items():
-                name = base_name + "_" + k_val
+                name = str(base_name) + "_" + str(k_val)
                 fpdict[name] = fp.hash
                 names.append(name)
             return names
