@@ -79,6 +79,7 @@ fpdict["rdk7"] = lambda m: Chem.RDKFingerprint(
 )
 
 
+REMOTE_FPS_PREFIXES = []
 # TODO add trainable fps
 fp_train_dict = {}
 
@@ -266,6 +267,7 @@ def TrainFP(fp_name, all_train_smiles):
         ecfp_radius=ecfp_radius,
     )
 
+    REMOTE_FPS_PREFIXES.append(elements[1])
     base_name = "_".join(elements[1:4])
 
     if len(elements) > 4:
@@ -292,7 +294,8 @@ def CalculateFP(fp_name, smiles):
     m = smiles
     # only convert to a rdkit molecule when we don't call a remote method,
     # since the mols can't be serialized easily
-    if not fp_name in trainable_fps.keys():
+    name_elements = fp_name.split("_")
+    if name_elements[0] not in REMOTE_FPS_PREFIXES:
         m = Chem.MolFromSmiles(m)
         if m is None:
             raise ValueError("SMILES cannot be converted to a RDKit molecules:", smiles)
