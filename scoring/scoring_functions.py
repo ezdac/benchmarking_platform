@@ -94,7 +94,7 @@ def trainFP(fp_name, training_smiles):
 
 
     """
-    fingerprint_lib.TrainFP(fp_name, training_smiles)
+    return fingerprint_lib.TrainFP(fp_name, training_smiles)
 
 
 def getFPDict(fp_names, smiles):
