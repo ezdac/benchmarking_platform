@@ -170,6 +170,7 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
             # derived from the input name!
             fp_names = scor.trainFP(fp_name, training_smiles)
 
+            print "Will train following fingerprinter: ", fp_names
             for fp_build in fp_names:
 
                 actives = calc_fingerprints(actives_id_smiles, fp_build)

@@ -284,6 +284,7 @@ def TrainFP(fp_name, all_train_smiles):
                 fpdict[name] = fp.hash
                 names.append(name)
             return names
+        raise ValueError("Unknown fingerprinter")
 
     else:
         fpdict[base_name] = seed_fp.hash
