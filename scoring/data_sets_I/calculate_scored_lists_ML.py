@@ -168,7 +168,7 @@ def run_scoring(options, ml_model, path, ml_name_prefix):
             # the remote fingerprinter.
             # It will return names of fingerprints that are valid and
             # derived from the input name!
-            fp_names = scor.trainFP(fp_name, training_smiles)
+            fp_names = scor.trainFP(fp_name, training_smiles, str(target))
 
             print "Will train following fingerprinter: ", fp_names
             for fp_build in fp_names:

@@ -84,7 +84,7 @@ def checkQueryMols(num, list_num_query_mols):
         raise ValueError("provided number of query molecules not supported:", num)
 
 
-def trainFP(fp_name, training_smiles):
+def trainFP(fp_name, training_smiles, target):
     """
     TODO trigger actions from specific names, 
     e.g. 'FPNAME_k_series_5' means that the 
@@ -95,7 +95,7 @@ def trainFP(fp_name, training_smiles):
 
     """
     print "Checking if training is necessary for ", fp_name
-    return fingerprint_lib.TrainFP(fp_name, training_smiles)
+    return fingerprint_lib.TrainFP(fp_name, training_smiles, target)
 
 
 def getFPDict(fp_names, smiles):

@@ -227,7 +227,7 @@ if FIPRI_SERVER_PORT and FIPRI_SERVER_PORT:
     )
 
 
-def TrainFP(fp_name, all_train_smiles):
+def TrainFP(fp_name, all_train_smiles, target):
     """
     Only when this is called from the script with all the training smiles strings,
     it will be accessible by CalculateFP!
@@ -268,7 +268,7 @@ def TrainFP(fp_name, all_train_smiles):
     )
 
     REMOTE_FPS_PREFIXES.append(elements[1])
-    base_name = "_".join(elements[1:4])
+    base_name = "_".join((str(target), *elements[1:4]))
 
     if len(elements) > 4:
         # this is a series fingerprint
