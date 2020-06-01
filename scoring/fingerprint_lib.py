@@ -268,8 +268,8 @@ def TrainFP(fp_name, all_train_smiles, target):
     )
 
     REMOTE_FPS_PREFIXES.append(elements[1])
-    name_elements = [str(target)]
-    name_elements += list(elements[1:4])
+    name_elements = [elements[1], str(target)]
+    name_elements += list(elements[2:4])
     base_name = "_".join(name_elements)
 
     if len(elements) > 4:
